@@ -1,0 +1,13 @@
+# virtualenv
+venv/
+
+#Chrome User profile
+chromeprofile
+
+images
+
+
+#Unnecessary files
+deneme7.py
+main.py
+attemption.py
