@@ -1,0 +1,6 @@
+2022/01/25-22:14:03.689 4574 Reusing MANIFEST C:\Users\GreyWolf\UPWORK_PROJECTS\WebBrowserBotStandaloneApp\chromeprofile\Default\Local Storage\leveldb/MANIFEST-000001
+2022/01/25-22:14:03.691 4574 Recovering log #3
+2022/01/25-22:14:03.692 4574 Reusing old log C:\Users\GreyWolf\UPWORK_PROJECTS\WebBrowserBotStandaloneApp\chromeprofile\Default\Local Storage\leveldb/000003.log 
+2022/01/25-22:15:06.006 2e78 Level-0 table #5: started
+2022/01/25-22:15:06.016 2e78 Level-0 table #5: 132068 bytes OK
+2022/01/25-22:15:06.018 2e78 Delete type=0 #3
