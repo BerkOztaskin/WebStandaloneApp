@@ -261,7 +261,7 @@ class myEditor(QMainWindow):
         self.browser.setUrl(QUrl(f"http://127.0.0.1:{PORT}"))
 
 
-
+    #Pause function
     def pauseCode(self):
         pass
 
