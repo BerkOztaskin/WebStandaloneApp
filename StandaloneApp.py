@@ -1,17 +1,20 @@
 #!/usr/bin/python3
 # -- coding: utf-8 --
-from PyQt5.QtWidgets import QPlainTextEdit, QWidget, QVBoxLayout, QApplication, QFileDialog, QMessageBox, QHBoxLayout, QTextEdit, QToolBar, QAction, QMenu, QMainWindow, QSystemTrayIcon, QStyleFactory, QSplitter, QSizePolicy, QTabWidget
-from PyQt5.QtGui import QIcon, QColor, QTextCursor, QKeySequence, QTextCharFormat
-from PyQt5.QtCore import Qt, QDir, QFile, QFileInfo, QTextStream, QSettings, QProcess, QUrl, QSize
+from PyQt5.QtWidgets import QPlainTextEdit,QApplication, QFileDialog, QMessageBox,QTextEdit, QToolBar, QAction, QMenu, QMainWindow, QSystemTrayIcon, QStyleFactory, QSplitter, QTabWidget, QComboBox, QInputDialog, QLabel, QPushButton
+from PyQt5.QtGui import QIcon, QColor, QTextCursor, QKeySequence,QFont
+from PyQt5.QtCore import Qt, QDir, QFile, QFileInfo, QTextStream, QSettings, QProcess, QUrl
 import syntax_py
 from PyQt5.Qt import PYQT_CONFIGURATION
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from os import path, pardir, system as shell
+import concurrent.futures
 from sys import argv
+import pyperclip as pc
+from threading import Thread
 from number_bar import NumberBar
 import os
-import time
-import subprocess
+import style_sheets as ss
+import editor as ed
 
 
 CHROME_PATH = 'C:\Program Files (x86)\Google\Chrome\Application'
@@ -19,7 +22,7 @@ CHROME_PATH = 'C:\Program Files (x86)\Google\Chrome\Application'
 print(PYQT_CONFIGURATION["sip_flags"])
 lineBarColor = QColor("#DED6AC")
 lineHighlightColor  = QColor("#F5F5F5")
-tab = chr(9)
+tab = "\t"
 eof = "\n"
 h = 800
 w = 1400
@@ -29,18 +32,17 @@ PORT = 1222
 
 
 class myEditor(QMainWindow):
+
     def __init__(self, parent = None):
         super(myEditor, self).__init__(parent)
         self.setWindowTitle('Web Browser Bot Standalone Application')
         self.setStyle(QStyleFactory.create('Fusion'))
         self.resize(w, h)
         self.browser = QWebEngineView()
-        self.browser.setUrl(QUrl(f"http://127.0.0.1:{PORT}"))
-
-
-
-
-
+        self.port = PORT
+        self.url = ""
+        self.browser.setUrl(QUrl(f"http://127.0.0.1:{self.port}"))
+        self.template_file = []
         self.appfolder = path.abspath("./") + "/"
 #        shell("cd " + self.appfolder)
         self.statusBar().showMessage(self.appfolder)
@@ -51,11 +53,9 @@ class myEditor(QMainWindow):
         self.dirpath = QDir.homePath() + "/Documents/python_files/"
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowIcon(QIcon(self.appfolder + "icons/icon.png"))
-
-        # Editor Widget ...
         QIcon.setThemeName('Faenza-Dark')
-        self.editor = QPlainTextEdit() 
-        self.editor.setStyleSheet(stylesheet2(self))
+        self.editor = ed.TextEdit()
+        self.editor.setStyleSheet(ss.style_sheet2)
         self.editor.setTabStopWidth(20)
         self.extra_selections = []
         self.mainText = "#!/usr/bin/python3\n# -*- coding: utf-8 -*-\n"
@@ -65,20 +65,19 @@ class myEditor(QMainWindow):
         self.mylabel = QTextEdit()
         self.mylabel.setFixedHeight(160)
         self.mylabel.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        # Line Numbers ...
         self.numbers = NumberBar(self.editor)
         self.createActions()
-        # Syntax Highlighter ...
         self.highlighter = syntax_py.Highlighter(self.editor.document())
-        # Laying out...
 
+        self.label = QLabel("LOCALHOST PORT:")
+        self.port_button = QPushButton(f"{self.port}")
+        self.port_button.clicked.connect(self.copy_port_number)
 
-        ### systray
-        self.createTrayIcon()
-        self.trayIcon.show()
         ### statusbar
         self.statusBar()
-        self.statusBar().setStyleSheet(stylesheet2(self))
+        self.statusBar().setStyleSheet(ss.style_sheet2)
+        self.statusBar().addPermanentWidget(self.label)
+        self.statusBar().addPermanentWidget(self.port_button)
 #        self.statusBar().showMessage('Welcome')
         ### begin toolbar
         tb = QToolBar(self)
@@ -111,32 +110,47 @@ class myEditor(QMainWindow):
 
         tb.addSeparator()
 
-        self.py3Act = QAction("run in Python 3 (F5)", self, shortcut="F5",
+        self.py3Act = QAction("Run in Python 3 (F5)", self, shortcut="F5",
                 toolTip="run in Python 3 (F5)", triggered=self.runPy3)
         self.py3Act.setIcon(QIcon(self.appfolder + "/icons/play"))
         tb.addAction(self.py3Act)
 
-        self.pauseAct = QAction("Stop", self, shortcut="F6",
-                               toolTip="stop", triggered=self.pauseCode)
-        self.pauseAct.setIcon(QIcon(self.appfolder + "/icons/pause"))
-        tb.addAction(self.pauseAct)
 
         self.stopAct = QAction("Stop", self, shortcut="F7",
-                              toolTip="stop", triggered=self.stopCode)
+                              toolTip="stop (F7)", triggered=self.killPython)
         self.stopAct.setIcon(QIcon(self.appfolder + "/icons/stop"))
         tb.addAction(self.stopAct)
 
-        self.refreshAct = QAction("Stop", self, shortcut="F8",
-                               toolTip="stop", triggered=self.refreshCode)
+        tb.addSeparator()
+        tb.layout().setSpacing(5)
+
+        self.refreshAct = QAction("Refresh Port", self, shortcut="F8",
+                               toolTip="refresh port (F8)", triggered=lambda:self.start_thread())
         self.refreshAct.setIcon(QIcon(self.appfolder + "/icons/refresh"))
         tb.addAction(self.refreshAct)
 
-        self.refreshBrAct = QAction("Stop", self, shortcut="F8",
-                                  toolTip="stop", triggered=self.refreshBrowser)
-        self.refreshBrAct.setIcon(QIcon(self.appfolder + "/icons/refresh_browser"))
+        self.refreshBrAct = QAction("Refresh Browser", self, shortcut="F9",
+                                    toolTip="refresh browser (F9)", triggered=self.refreshBrowser)
+        self.refreshBrAct.setIcon(QIcon(self.appfolder + "/icons/refresh-page"))
         tb.addAction(self.refreshBrAct)
 
 
+        self.changePortAct = QAction("Change Port", self, shortcut="F10",
+                                    toolTip="change port (F10)", triggered=self.changePort)
+        self.changePortAct.setIcon(QIcon(self.appfolder + "/icons/ethernet"))
+        tb.addAction(self.changePortAct)
+
+        tb.addSeparator()
+
+        self.openTemplateAct = QAction("Open Template", self, shortcut="F11",
+                                     toolTip="open template (F11)", triggered=self.openTemplate)
+        self.openTemplateAct.setIcon(QIcon(self.appfolder + "/icons/txt-file"))
+        tb.addAction(self.openTemplateAct)
+
+        """self.specifyBrowserAct = QAction("Specify Browser", self, shortcut="F12",
+                                       toolTip="specify browser (F12)", triggered=self.specify_browser)
+        self.specifyBrowserAct.setIcon(QIcon(self.appfolder + "/icons/website"))
+        tb.addAction(self.specifyBrowserAct)"""
 
         self.addToolBar(tb)
         bar=self.menuBar()
@@ -151,28 +165,27 @@ class myEditor(QMainWindow):
             self.filemenu.addAction(self.recentFileActs[i])
         self.updateRecentFileActions()
         self.filemenu.addSeparator()
-        self.clearRecentAct = QAction("clear Recent Files List", self, triggered=self.clearRecentFiles)
+        self.clearRecentAct = QAction("Clear Recent Files List", self, triggered=self.clearRecentFiles)
         self.clearRecentAct.setIcon(QIcon.fromTheme("edit-clear"))
         self.filemenu.addAction(self.clearRecentAct)
         self.filemenu.addSeparator()
 
         
         editmenu = bar.addMenu("Edit")
-        editmenu.addAction(QAction(QIcon.fromTheme('edit-undo'), "Undo", self, triggered = self.editor.undo, shortcut = "Ctrl+z"))
-        editmenu.addAction(QAction(QIcon.fromTheme('edit-redo'), "Redo", self, triggered = self.editor.redo, shortcut = "Ctrl+y"))
+        editmenu.addAction(QAction(QIcon('icons/undo.png'), "Undo", self, triggered = self.editor.undo, shortcut = "Ctrl+z"))
+        editmenu.addAction(QAction(QIcon('icons/redo.png'), "Redo", self, triggered = self.editor.redo, shortcut = "Ctrl+y"))
         editmenu.addSeparator()
-        editmenu.addAction(QAction(QIcon.fromTheme('edit-copy'), "Copy", self, triggered = self.editor.copy, shortcut = "Ctrl+c"))
-        editmenu.addAction(QAction(QIcon.fromTheme('edit-cut'), "Cut", self, triggered = self.editor.cut, shortcut = "Ctrl+x"))
-        editmenu.addAction(QAction(QIcon.fromTheme('edit-paste'), "Paste", self, triggered = self.editor.paste, shortcut = "Ctrl+v"))
-        editmenu.addAction(QAction(QIcon.fromTheme('edit-delete'), "Delete", self, triggered = self.editor.cut, shortcut = "Del"))
+        editmenu.addAction(QAction(QIcon('icons/copy.png'), "Copy", self, triggered = self.editor.copy, shortcut = "Ctrl+c"))
+        editmenu.addAction(QAction(QIcon('icons/cutting.png'), "Cut", self, triggered = self.editor.cut, shortcut = "Ctrl+x"))
+        editmenu.addAction(QAction(QIcon('icons/paste.png'), "Paste", self, triggered = self.editor.paste, shortcut = "Ctrl+v"))
+        editmenu.addAction(QAction(QIcon('icons/delete.png'), "Delete", self, triggered = self.editor.cut, shortcut = "Del"))
         editmenu.addSeparator()
-        editmenu.addAction(QAction(QIcon.fromTheme('edit-select-all'), "Select All", self, triggered = self.editor.selectAll, shortcut = "Ctrl+a"))
-        editmenu.addSeparator()
-        editmenu.addSeparator()
+        editmenu.addAction(QAction(QIcon('icons/select-all.png'), "Select All", self, triggered = self.editor.selectAll, shortcut = "Ctrl+a"))
         editmenu.addSeparator()
         editmenu.addAction(self.py3Act)
         editmenu.addSeparator()
 
+        self.loadTemplates()
 
         self.installEventFilter(self)
         self.editor.setFocus()
@@ -188,8 +201,8 @@ class myEditor(QMainWindow):
         self.process = QProcess(self)
         self.process.setProcessChannelMode(QProcess.MergedChannels)
         self.process.readyRead.connect(self.dataReady)
-        self.process.started.connect(lambda: self.mylabel.append("starting shell"))
-        self.process.finished.connect(lambda: self.mylabel.append("shell ended"))
+        self.process.started.connect(lambda: self.mylabel.append("code starting to run"))
+        self.process.finished.connect(lambda: self.mylabel.append("code stopped"))
 
         self.editor.setContextMenuPolicy(Qt.CustomContextMenu)
         self.editor.customContextMenuRequested.connect(self.contextMenuRequested)
@@ -200,8 +213,6 @@ class myEditor(QMainWindow):
         layoutT = QSplitter(Qt.Horizontal)
         layoutE2 = QSplitter(Qt.Vertical)
 
-        tabWidget = QTabWidget()
-
 
         layoutB.addWidget(self.browser)
         layoutE.addWidget(self.numbers)
@@ -209,7 +220,7 @@ class myEditor(QMainWindow):
         layoutE2.addWidget(layoutE)
 
         self.mylabel.setMinimumHeight(28)
-        self.mylabel.setStyleSheet(stylesheet2(self))
+        self.mylabel.setStyleSheet(ss.style_sheet2)
         layoutE2.addWidget(self.mylabel)
 
         layoutT.addWidget(layoutB)
@@ -223,81 +234,107 @@ class myEditor(QMainWindow):
 
         self.setCentralWidget(layoutV)
 
-        '''layoutV = QVBoxLayout()
-        layoutB = QHBoxLayout()
-        layoutE = QHBoxLayout()
-        layoutT = QHBoxLayout()
-        layoutE2 = QVBoxLayout()
-        layoutE.setSpacing(1.5)
-
-
-
-        layoutB.addWidget(self.browser)
-        layoutE.addWidget(self.numbers)
-        layoutE.addWidget(self.editor)
-        layoutE2.addLayout(layoutE)
-        self.mylabel.setMinimumHeight(28)
-        self.mylabel.setStyleSheet(stylesheet2(self))
-        layoutE2.addWidget(self.mylabel)
-
-
-        layoutT.addLayout(layoutB)
-        layoutT.addLayout(layoutE2)
-        #layoutV.addWidget(bar)
-        #layoutV.addWidget(tb)
-        layoutV.addLayout(layoutT)
-
-        ### main window
-        mq = QWidget(self)
-        mq.setLayout(layoutV)
-        self.setCentralWidget(mq)'''
-
+    #conntection with thread, so there is no freeze in refresh port buttons
     def refreshCode(self):
-        stream = os.popen(f"npx kill-port {PORT}")
+        stream = os.popen(f"npx kill-port {self.port}")
+        return stream.read()
+    def show_template_dialog(self):
+        template, pressed = QInputDialog.getItem(self,"Select Template", "Options:", self.template_file, 0, False)
+        if pressed:
+            self.insertTemplate(template)
 
-        print(stream.read())
+    def openTemplate(self):
+        self.show_template_dialog()
+
+    def show_browser_dialog(self):
+        URL, ok = QInputDialog.getText(self, "Specify Browser", "Enter URL:")
+        if ok:
+            self.statusBar().showMessage(f"{URL}")
+            self.refreshBrowser(URL)
+
+    def copy_port_number(self):
+        pc.copy(f'{self.port}')
+
+    def specify_browser(self):
+        self.show_browser_dialog()
+
+
+    def start_thread(self):
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(self.refreshCode)
+            self.statusBar().showMessage(future.result())
+
+        """
+        process = Thread(target=self.refreshCode, args=[])
+        process.start()
+        process.join()"""
+
     def refreshBrowser(self):
         self.browser.update()
-        self.browser.setUrl(QUrl(f"http://127.0.0.1:{PORT}"))
-
-
-    #Pause function
-    def pauseCode(self):
-        pass
-
-    def stopCode(self):
-        pass
+        self.browser.setUrl(QUrl(f"http://127.0.0.1:{self.port}"))
 
     def contextMenuRequested(self,point):
-
         cmenu = self.editor.createStandardContextMenu()
-        cmenu.addSeparator()
-        cmenu.addAction(self.jumpToAct)
-        cmenu.addSeparator()
-        cmenu.addAction(QIcon.fromTheme("gtk-find-and-replace"),"replace all occurrences with", self.replaceThis)
         cmenu.addSeparator()
         cmenu.addAction(self.py3Act)
         cmenu.addSeparator()
-        cmenu.addSeparator()
-        cmenu.addSeparator()
-        cmenu.exec_(self.editor.mapToGlobal(point))    
+        cmenu.exec_(self.editor.mapToGlobal(point))
+
+    def show_port_dialog(self):
+        font = QFont()
+        font.setFamily('Arial')
+        font.setPointSize(10)
+        inputDialog = QInputDialog(None)
+        inputDialog.setFixedSize(300,100)
+        port, ok = inputDialog.getInt(self,'Change Port' ,'Select New Port Number:' , 1000, 1000, 9999, 1)
+        inputDialog.setFont(font)
+        if ok:
+            self.statusBar().showMessage(f'Port number changes as {port}')
+            self.port = port
+            self.port_button.setText(f'{port}')
+
+    def changePort(self):
+        self.show_port_dialog()
 
 
+    def loadTemplates(self):
+        folder = self.appfolder + "/templates"
+        if QDir().exists(folder):
+            self.currentDir = QDir(folder)
+            fileName = "*"
+            files = self.currentDir.entryList([fileName],
+                    QDir.Files | QDir.NoSymLinks)
 
-    def indentLine(self):
-        if not self.editor.textCursor().selectedText() == "":
-            newline = u"\u2029"
-            list = []
-            ot = self.editor.textCursor().selectedText()
-            theList  = ot.splitlines()
-            self.statusBar().showMessage(theList[1])
-            linecount = ot.count(newline)
-            for i in range(linecount):
-                list.insert(i, tab + theList[i])
-            self.editor.textCursor().insertText(newline.join(list))
-            self.setModified(True)    
-            self.statusBar().showMessage("tabs indented")
-        
+            for i in range(len(files)):
+                file = (files[i])
+                if file.endswith(".py"):
+                    self.template_file.append(file.replace(self.appfolder + "/templates", "").replace(".py", ""))
+
+    def insertTemplate(self, file_name):
+        line = int(self.getLineNumber())
+        path = self.appfolder + "/templates/" + file_name + ".py"
+        if path:
+            inFile = QFile(path)
+            if inFile.open(QFile.ReadOnly | QFile.Text):
+                text = inFile.readAll()
+                self.editor.setFocus()
+
+                text = (self.mainText + str(text, encoding = 'utf8'))
+                try: ### python 3
+                    self.editor.setPlainText(text)
+                except TypeError:  ### python 2
+                    self.editor.setPlainText(text)
+                self.setModified(True)
+                self.statusBar().showMessage(f"{file_name}.py inserted")
+                inFile.close()
+                text= ""
+                self.selectLine(line)
+            else:
+                self.statusBar().showMessage("Error Occured When Open Template!")
+
+    def selectLine(self, line):
+        return
+
     def dataReady(self):
         out = ""
         try:
@@ -365,17 +402,7 @@ class myEditor(QMainWindow):
                 self.setModified(False)
                 self.setCurrentFile(path)
                 self.editor.setFocus()
-                ### save backup
-                file = QFile(self.filename + "_backup")
-                if not file.open( QFile.WriteOnly | QFile.Text):
-                    QMessageBox.warning(self, "Error",
-                        "Cannot write file %s:\n%s." % (self.filename, file.errorString()))
-                    return
-                outstr = QTextStream(file)
-                QApplication.setOverrideCursor(Qt.WaitCursor)
-                outstr << self.editor.toPlainText()
-                QApplication.restoreOverrideCursor()  
-                self.statusBar().showMessage("File '" + path + "' loaded succesfully & bookmarks added & backup created ('" + self.filename + "_backup" + "')")
+                self.statusBar().showMessage("File '" + path + "' loaded succesfully ")
 
     def openFile(self, path=None):
         if self.maybeSave():
@@ -459,21 +486,23 @@ class myEditor(QMainWindow):
         return True   
 
     def runPy3(self):
+        self.refreshCode()
         if not self.editor.toPlainText() == self.mainText:
             if self.filename:
 
-                self.mypython = "2"
-                self.statusBar().showMessage("running " + self.filename + " in Python 2")
+                self.mypython = "3"
+                self.statusBar().showMessage("running " + self.filename + " in Python 3")
                 self.fileSave()
                 cmd = "python"
                 self.readData(cmd)
 
             else:
-                self.filename = "/tmp/tmp3.py"
+                self.filename = "tmp3.py"
                 self.fileSave()
                 self.runPy3()
         else:
             self.statusBar().showMessage("no code to run")
+        self.refreshBrowser()
 
     def readData(self, cmd):
         self.mylabel.clear()
@@ -482,9 +511,7 @@ class myEditor(QMainWindow):
 
     def killPython(self):
         if (self.mypython == "3"):
-            cmd = "killall python3"
-        elif (self.mypython == "2"):
-            cmd = "killall python"
+            cmd = "kill -9"
         self.readData(cmd)
 
     def match_left(self, block, character, start, found):
@@ -581,40 +608,6 @@ class myEditor(QMainWindow):
     def msgbox(self,title, message):
         QMessageBox.warning(self, title, message)
 
-    def createTrayIcon(self):
-        self.trayIcon = QSystemTrayIcon(self)
-        self.trayIcon.setIcon(QIcon(self.appfolder + "/icons/python2"))
-        self.trayIconMenu = QMenu(self)
-        for i in range(self.MaxRecentFiles):
-            self.trayIconMenu.addAction(self.recentFileActs[i])
-        self.trayIconMenu.addSeparator()
-        self.trayIcon.setContextMenu(self.trayIconMenu)
-
-
-def stylesheet2(self):
-        return """
-QPlainTextEdit
-{
-background: #FAFCFE;
-color: #202020;
-border: 1px solid #1EAE3D;
-}
-QTextEdit
-{
-background: #292929;
-color: #1EAE3D;
-font-size: 8pt;
-padding-left: 6px;
-border: 1px solid #1EAE3D;
-}
-QStatusBar
-{
-height: 22px;
-background: transparent;
-color: #4F4F4F;
-font-size: 9pt;
-}
-    """
 
 
 if __name__ == '__main__':

@@ -4,9 +4,6 @@ venv/
 #Chrome User profile
 chromeprofile
 
-#Empty files
-images
-
 
 #Unnecessary files
 deneme7.py

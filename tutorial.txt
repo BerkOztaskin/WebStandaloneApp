@@ -1,0 +1,78 @@
+Hello Dear Teodor,
+
+I will make a quick tutorial to you.
+
+
+I'm sorry for not being able to give a voice presentation right now because 
+I have the flu, my voice is terrible and my throat hurts so much that I can't speak.
+
+As you can see, there are menubar and toolbar at the top of the GUI. 
+
+Under the File menu in the menubar,
+▶ "New" option to open a new file
+▶ "Open" option where you can open .py files
+▶ "Save" and "Save As" options you will use to save your files
+▶ As you can see, here we can see historical files that I have opened, written or saved before. If you wish, you can delete them with the "Clear Recent Files" option.
+
+
+By the way, if you run any file you wrote without saving it, it will run by saving it as tmp3.py. 
+
+Under the edit menu,
+▶ I don't need to explain the purpose of the buttons here, I think it's clear what they are from their names.
+
+Let's talk about the toolbar. You can drag the toolbar to the desired edge. Up to you. 
+
+If we talk about the contents of the toolbar;
+Along with those in the "New File", "Open File", "Save" and "Save as" file menu. I will explain the Run and Stop buttons shortly.
+
+These three buttons you see here,
+
+▶ "Refresh Port"  You will not need to press this button in the general operation of the GUI because I have taken the necessary precautions, but it may be necessary to use it manually. Here I will explain in detail.
+
+▶ "Refresh Browser" updates the browser section on the left side of the GUI, and I will tell you when to use it.
+
+▶ "Change Port" Here you can change the port you will use with localhost. You can use this option when the port is not responding in any way. I didn't need to use it at all, but I wanted to put it as a precaution.
+As you can see here, the active port appears here, and you can copy the active port by pressing this button.
+
+▶ Finally, with the open template button, you can open the sample files you have placed in the templates folder and perform operations on them.
+
+Okay, now let's do an example.
+
+
+Let's open the file named >>loginInstagramAccount<< through the input dialog that appears on the screen by pressing the "Open Template" button. This code is a code I wrote to automatically enter my instagram account. Let's run the code directly.
+
+And as you can see, the browser part has renewed itself and brought a link to the screen. You can see the relevant page by clicking this link.
+
+
+Great! Now I will tell you how to use this application with your own codes. First of all, I open the templateSelenium code by clicking the "Open template" button. I will explain through this code.
+
+Actually, this code is required to connect the Browser and the IDE. So when you write your own code, you have to use these lines of code.
+
+
+
+I'll start with the PORT variable. As you can see this variable is equal to a 4-digit number. And as you can see the LOCALHOST PORT at the bottom right: 1222 is a 4-digit number and is exactly the same for both.
+
+First of all, you should know that the Browser section is waiting for browsers opened on port 1222. When I run the code, the browser will refresh and open instagram.com.
+
+Now let's change the port number. With the "Change Port" button, I can change the port number used by the browser to the 4-digit number I want. Let's say it's 5555. If we run it this way, there will be no change in the Browser part.
+
+You ask why?
+
+Because while the code opens the browser on port 1222, the application monitors port 5555.
+
+!!!!!SO THE PORT NUMBERS IN THE BROWSER AND THE CODE MUST ALWAYS BE THE SAME. !!!Localhost port: The 4-digit number next to the label is actually a button, you can copy the active port number by clicking here. Next, you should give this value to the PORT variable in the code.
+
+paste it with control + v
+5555
+
+And let's try again.
+
+
+Worked.
+
+That's it, you can run every code you add with this 4 lines of code with this application. I hope you develop great apps and use them for many years. :)
+
+Last of all, you have not to use class you can write the code like that 
+
+
+thanks for watching

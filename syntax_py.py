@@ -11,7 +11,7 @@ class Highlighter(QSyntaxHighlighter):
         blue = "#2C2CC8"
         keywordFormat = QTextCharFormat()
         keywordFormat.setForeground(QColor(blue))
-        keywordFormat.setFontWeight(QFont.Bold)
+        #keywordFormat.setFontWeight(QFont.Bold)
 
         keywordPatterns = ["\\bdef\\b","\\bimport\\b","\\bchar\\b", "\\bclass\\b", "\\bconst\\b",
                 "\\bdouble\\b", "\\belif\\b", "\\benum\\b", "\\bexplicit\\b", "\\bfriend\\b",
@@ -28,7 +28,7 @@ class Highlighter(QSyntaxHighlighter):
         
         darkred = "#B9182D"    
         booleanFormat = QTextCharFormat()
-        booleanFormat.setFontWeight(QFont.Bold)
+        #booleanFormat.setFontWeight(QFont.Bold)
         booleanFormat.setForeground(QColor(darkred))
         self.highlightingRules.append((QRegExp("\\b[False]+\\b"),
                 booleanFormat))
@@ -36,7 +36,7 @@ class Highlighter(QSyntaxHighlighter):
                 booleanFormat))
 
         classFormat = QTextCharFormat()
-        classFormat.setFontWeight(QFont.Bold)
+        #lassFormat.setFontWeight(QFont.Bold)
         classFormat.setForeground(QColor("#3F3F3F"))
         self.highlightingRules.append((QRegExp("\\bQ[A-Za-z]+\\b"),
                 classFormat))
