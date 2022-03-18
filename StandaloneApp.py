@@ -17,6 +17,7 @@ import style_sheets as ss
 import editor as ed
 
 
+
 CHROME_PATH = 'C:\Program Files (x86)\Google\Chrome\Application'
 
 print(PYQT_CONFIGURATION["sip_flags"])
@@ -41,7 +42,9 @@ class myEditor(QMainWindow):
         self.browser = QWebEngineView()
         self.port = PORT
         self.url = ""
-        self.browser.setUrl(QUrl(f"http://127.0.0.1:{self.port}"))
+        self.browser.load(QUrl(f"http://127.0.0.1:{self.port}"))
+
+        #elf.browser.setUrl(QUrl(f"-https://localhost:{self.port}"))
         self.template_file = []
         self.appfolder = path.abspath("./") + "/"
 #        shell("cd " + self.appfolder)
@@ -250,7 +253,7 @@ class myEditor(QMainWindow):
         URL, ok = QInputDialog.getText(self, "Specify Browser", "Enter URL:")
         if ok:
             self.statusBar().showMessage(f"{URL}")
-            self.refreshBrowser(URL)
+            self.refreshBrowser()
 
     def copy_port_number(self):
         pc.copy(f'{self.port}')
@@ -271,7 +274,9 @@ class myEditor(QMainWindow):
 
     def refreshBrowser(self):
         self.browser.update()
-        self.browser.setUrl(QUrl(f"http://127.0.0.1:{self.port}"))
+        self.browser.load(QUrl(f"http://127.0.0.1:{self.port}"))
+        #self.browser.setUrl(QUrl(f"https://localhost:{self.port}"))
+
 
     def contextMenuRequested(self,point):
         cmenu = self.editor.createStandardContextMenu()

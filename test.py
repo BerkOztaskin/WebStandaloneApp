@@ -10,9 +10,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 
-
-capabilities = webdriver.DesiredCapabilities.CHROME.copy()
-
 PORT = 1222
 
 
@@ -24,13 +21,13 @@ class Browser:
 
         options = webdriver.ChromeOptions()
 
-        #options.add_argument(f'--remote-debugging-port={PORT}')
+        options.add_argument(f'--remote-debugging-port={PORT}')
         # options.add_argument('--auto-open-devtools-for-tabs')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-gpu')
         options.add_argument('--disable-infobars')
         options.add_argument('--disable-notifications')
-        options.add_argument('--headless')
+        #options.add_argument('--headless')
         self.driver = webdriver.Chrome(options=options)
         self.driver.maximize_window()
         self.driver.get(self.link)

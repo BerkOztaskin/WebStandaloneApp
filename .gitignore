@@ -1,5 +1,9 @@
 # virtualenv
 venv/
+chromeprofile/
+icons/
+.idea/
+
 
 #Chrome User profile
 chromeprofile
